@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scrollytelling Preview</title>
+
+<style>
+  body{
+    margin:0;
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:#f1f2f2;
+    color:#111;
+  }
+
+  .scrolly{
+    max-width:1100px;
+    margin:0 auto;
+    padding:0 20px;
+  }
+
+  .inner{
+    display:grid;
+    grid-template-columns:65% 35%;
+    gap:24px;
+  }
+
+  /* Sticky image panel (desktop) */
+  .graphic{
+    position:sticky;
+    top:24px;
+    height:calc(100vh - 48px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:transparent;
+    z-index:1;
+  }
+
+  .frame{
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .frame img{
+    max-width:100%;
+    max-height:100%;
+    width:auto;
+    height:auto;
+    display:block;
+    border-radius:0;
+  }
+
+  /* Scroll scenes */
+  .steps{
+    position:relative;
+    z-index:5; /* text above image if they overlap */
+  }
+
+  .step{
+    min-height:110vh; /* increase to slow more */
+    display:flex;
+    align-items:flex-end;
+    padding-bottom:40px;
+  }
+
+  .card{
+    background:#fff;
+    border:1px solid rgba(0,0,0,.12);
+    border-radius:14px;
+    padding:14px 16px;
+    font-size:18px;
+    line-height:1.65;
+    max-width:38ch;
+    box-shadow:0 1px 0 rgba(0,0,0,0.03);
+  }
+
+  /* Keep active state subtle (white) */
+  .step.active .card{
+    background:#fff;
+    color:#111;
+    border-color: rgba(0,0,0,0.45);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.12);
+  }
+
+  /* spacer so last card scrolls fully */
+  .end-spacer{ height:120vh; }
+
+  /* MOBILE:
+     - text centered (so first card shows mid screen)
+     - image stays sticky
+     - trigger handled by JS so image doesn't change when text touches it
+  */
+  @media(max-width:768px){
+    .inner{ grid-template-columns:1fr; }
+
+    .graphic{
+      position:sticky;
+      top:12px;
+      height:52vh;
+      margin:12px 0 14px 0;
+      z-index:1;
+    }
+
+    .steps{ z-index:5; }
+
+    /* CHANGED: center the card in each step (instead of bottom) */
+    .step{
+      min-height:90vh;
+      display:flex;
+      align-items:center; /* was flex-end */
+      padding-bottom:0;   /* was 28px */
+      padding-top:0;
+    }
+
+    .card{ max-width:56ch; }
+  }
+</style>
+</head>
+
+<body>
+
+<section class="scrolly">
+  <div class="inner">
+
+    <div class="graphic" aria-hidden="true">
+      <div class="frame" id="viz"></div>
+    </div>
+
+    <div class="steps">
+      <div class="step" data-s="0"><div class="card">🕙 10:17 PM — The first call to attack appears.</div></div>
+      <div class="step" data-s="1"><div class="card">Repeated violent phrases normalize the idea of violence.</div></div>
+      <div class="step" data-s="2"><div class="card">Engagement surges. Violence becomes viral.</div></div>
+      <div class="step" data-s="3"><div class="card">Justifications appear. Violence becomes morally permitted.</div></div>
+      <div class="step" data-s="4"><div class="card"><strong>THE ATTACK HAPPENS</strong></div></div>
+      <div class="step" data-s="5"><div class="card">Celebration floods the platform.</div></div>
+      <div class="step" data-s="6"><div class="card">After 4 PM, attention collapses.</div></div>
+      <div class="end-spacer" aria-hidden="true"></div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+  const viz = document.getElementById("viz");
+  const steps = Array.from(document.querySelectorAll(".step"));
+  const graphic = document.querySelector(".graphic");
+
+  const images = [
+    "https://en.dismislab.com/wp-content/uploads/2025/12/RAB-recovered-four-Pakistani-grenades-Dhaka-Demra-Fact-checked-Dismislab.jpg",
+    "https://en.dismislab.com/wp-content/uploads/2025/12/osman-hadi-attacker-arrest-video-factcheck.jpg",
+    "https://en.dismislab.com/wp-content/uploads/2025/12/awami-league-fake-Procession-video-factcheck-scaled.jpg",
+    "https://en.dismislab.com/wp-content/uploads/2025/12/a-mob-Tawhidi-Janata-set-fire-Kushtia-temple-factchek.jpg",
+    "https://en.dismislab.com/wp-content/uploads/2025/12/Pro-Awami-League-network-discredits-dismislab-with-review-bombing-1.jpg",
+    "https://en.dismislab.com/wp-content/uploads/2025/12/Junaid-Ahmed-Palak-granted-bail-after-491-days-fact-check.jpg",
+    "https://en.dismislab.com/wp-content/uploads/2025/12/fake-procession-of-awami-league-in-dhaka-factcheck.jpg"
+  ];
+
+  // preload so scrolling up/down never blanks
+  images.forEach(src => { const i = new Image(); i.src = src; });
+
+  function setStep(i){
+    const idx = Math.max(0, Math.min(i, images.length - 1));
+    steps.forEach(s => s.classList.toggle("active", Number(s.dataset.s) === idx));
+    viz.innerHTML = `<img src="${images[idx]}" alt="Scrolly image ${idx+1}" loading="eager">`;
+  }
+
+  setStep(0);
+
+  // MOBILE FIX:
+  // Put the "activation line" BELOW the sticky image area.
+  // This prevents image 2 from loading just because text touches the image.
+  function getRootMargin(){
+    const isMobile = window.innerWidth <= 768;
+
+    if(!isMobile){
+      // desktop: swap when step crosses middle of viewport
+      return "-50% 0px -50% 0px";
+    }
+
+    const gH = graphic.getBoundingClientRect().height; // sticky image height (px)
+    const vh = window.innerHeight;
+
+    // activation line below the image, ~55% down into remaining space
+    const triggerY = gH + (vh - gH) * 0.55;
+
+    const top = -Math.round(triggerY);
+    const bottom = -Math.round(vh - triggerY);
+
+    // thin "band" at triggerY
+    return `${top}px 0px ${bottom}px 0px`;
+  }
+
+  function buildObserver(){
+    return new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){
+          setStep(Number(e.target.dataset.s));
+        }
+      });
+    },{
+      threshold: 0,
+      rootMargin: getRootMargin()
+    });
+  }
+
+  let io = buildObserver();
+  steps.forEach(s=>io.observe(s));
+
+  window.addEventListener("resize", () => {
+    io.disconnect();
+    io = buildObserver();
+    steps.forEach(s=>io.observe(s));
+  });
+</script>
+
+</body>
+</html>
